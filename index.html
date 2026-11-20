@@ -3,21 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Saraunh0ly — гоночный портрет</title>
+<title>Saraunh0ly — кто под шлемом?</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <div class="stage">
-  <img id="racer" src="racer.jpg" alt="гонщик в шлеме">
-  <canvas id="reveal" aria-hidden="true"></canvas>
-  <div class="hint">поведи курсором по шлему — лицо проявится</div>
-  <div class="signature">Saraunh0ly</div>
+  <div class="frame" id="frame">
+    <img class="face" src="face.jpg" alt="гонщик без шлема">
+    <canvas id="veil" aria-hidden="true"></canvas>
+    <div class="signature">Saraunh0ly</div>
+    <div class="hint">води курсором по шлему</div>
+  </div>
+
+  <div class="bar">
+    <button id="soundBtn" class="sound-btn" aria-label="Включить/выключить звук">
+      <span class="eq"><i></i><i></i><i></i><i></i></span>
+      <span id="soundLabel">включить звук</span>
+    </button>
+    <span class="tag">наведи — увидишь, кто под шлемом</span>
+  </div>
 </div>
 
+<audio id="audio" src="sound.m4a" loop preload="auto"></audio>
 <script src="app.js"></script>
 </body>
 </html>

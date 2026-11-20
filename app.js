@@ -1,96 +1,147 @@
 (function(){
-  const img = document.getElementById('racer');
-  const cvs = document.getElementById('reveal');
-  const ctx = cvs.getContext('2d', { alpha: true });
-  const pulse = document.createElement('div');
-  pulse.className = 'pulse';
-  document.querySelector('.stage').appendChild(pulse);
+  const frame = document.getElementById('frame');
+  const canvas = document.getElementById('veil');
+  const ctx = canvas.getContext('2d');
+  const hint = frame.querySelector('.hint');
+  const audio = document.getElementById('audio');
+  const soundBtn = document.getElementById('soundBtn');
+  const soundLabel = document.getElementById('soundLabel');
 
-  let dpr = window.devicePixelRatio || 1;
-  let rect = { l:0,t:0,w:0,h:0 };
-  let mx = -9999, my = -9999;       // target (mouse)
-  let lx = -9999, ly = -9999;       // lerped (visual)
-  let active = false;
+  const helmet = new Image();
+  let helmetReady = false;
+  helmet.onload = function(){ helmetReady = true; };
+  helmet.src = 'helmet.jpg';
+
+  let w = 0, h = 0, dpr = 1;
 
   function resize(){
-    rect = img.getBoundingClientRect();
-    dpr = window.devicePixelRatio || 1;
-    cvs.width = Math.max(1, Math.round(rect.w * dpr));
-    cvs.height = Math.max(1, Math.round(rect.h * dpr));
-    cvs.style.width = rect.w + 'px';
-    cvs.style.height = rect.h + 'px';
+    const rect = frame.getBoundingClientRect();
+    const nw = Math.max(1, Math.round(rect.width));
+    const nh = Math.max(1, Math.round(rect.height));
+    const nd = window.devicePixelRatio || 1;
+    if (nw === w && nh === h && nd === dpr) return;
+    w = nw; h = nh; dpr = nd;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   window.addEventListener('resize', resize);
-  img.addEventListener('load', resize);
-  resize();
 
-  function onMove(e){
-    if (!rect.w) return;
-    active = true;
-    mx = e.clientX - rect.left;
-    my = e.clientY - rect.top;
-    // clamp inside image
-    mx = Math.max(0, Math.min(rect.w, mx));
-    my = Math.max(0, Math.min(rect.h, my));
-    pulse.style.left = (rect.left + mx) + 'px';
-    pulse.style.top = (rect.top + my) + 'px';
-    pulse.style.opacity = '1';
+  // состояние
+  let tx = 0, ty = 0;      // цель
+  let cx = 0, cy = 0;      // текущий центр
+  let tr = 0, cr = 0;      // радиус: цель / текущий
+  let follow = false;
+
+  function radiusBase(){ return h * 0.235; }
+
+  function onPointer(e){
+    const rect = frame.getBoundingClientRect();
+    tx = e.clientX - rect.left;
+    ty = e.clientY - rect.top;
+    follow = true;
+    if (!started){
+      started = true;
+      enableSound();
+    }
+    if (hint) hint.style.opacity = '0';
   }
-  document.querySelector('.stage').addEventListener('mousemove', onMove);
-  document.querySelector('.stage').addEventListener('mouseleave', function(){
-    active = false;
-    pulse.style.opacity = '0';
+  frame.addEventListener('pointermove', onPointer);
+  frame.addEventListener('pointerdown', onPointer);
+  frame.addEventListener('pointerleave', function(){ follow = false; });
+
+  // звук из видео
+  let soundOn = false;
+  let started = false;
+  function enableSound(){
+    if (soundOn) return;
+    soundOn = true;
+    try {
+      audio.volume = 0.9;
+      const p = audio.play();
+      if (p && p.then) p.catch(function(){});
+    } catch (err) {}
+    soundBtn.classList.add('playing');
+    soundLabel.textContent = 'выключить звук';
+  }
+  function disableSound(){
+    soundOn = false;
+    audio.pause();
+    soundBtn.classList.remove('playing');
+    soundLabel.textContent = 'включить звук';
+  }
+  soundBtn.addEventListener('click', function(){
+    if (soundOn) disableSound(); else enableSound();
   });
 
-  // smooth follow
-  function lerp(a,b,t){ return a + (b-a)*t; }
+  // отрисовка
+  const startTs = performance.now();
+  let first = true;
 
-  const RADIUS = 110;
-  function draw(){
-    lx = lerp(lx, mx, 0.18);
-    ly = lerp(ly, my, 0.18);
+  function draw(now){
+    const t = (now - startTs) / 1000;
 
-    ctx.clearRect(0, 0, rect.w, rect.h);
+    if (first){
+      resize();
+      cx = tx = w * 0.5;
+      cy = ty = h * 0.36;
+      cr = tr = radiusBase() * 0.6;
+      first = false;
+    }
 
-    // "шлемный" покров: тёмный холодный voile над фото
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(6, 14, 22, 0.72)';
-    ctx.fillRect(0, 0, rect.w, rect.h);
-    // чуть более темная зона в области лица (шлем), чтобы проявление было заметнее
-    const grad = ctx.createRadialGradient(rect.w*0.5, rect.h*0.34, 0, rect.w*0.5, rect.h*0.34, rect.w*0.55);
-    grad.addColorStop(0, 'rgba(2,6,12,0.55)');
-    grad.addColorStop(1, 'rgba(2,6,12,0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, rect.w, rect.h);
+    if (!follow){
+      // авто-демо: мягко дышит над визором
+      tx = w * 0.5 + Math.sin(t * 0.9) * w * 0.055;
+      ty = h * 0.355 + Math.sin(t * 0.63 + 1.2) * h * 0.035;
+      tr = radiusBase() * (0.80 + 0.16 * Math.sin(t * 1.15));
+    } else {
+      tr = radiusBase();
+    }
 
-    // отверстие — лицо проявляется под курсором
-    ctx.globalCompositeOperation = 'destination-out';
-    const hole = ctx.createRadialGradient(lx, ly, 0, lx, ly, RADIUS);
-    hole.addColorStop(0, 'rgba(0,0,0,1)');
-    hole.addColorStop(0.55, 'rgba(0,0,0,0.35)');
-    hole.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = hole;
-    ctx.beginPath();
-    ctx.arc(lx, ly, RADIUS, 0, Math.PI*2);
-    ctx.fill();
+    cx += (tx - cx) * 0.16;
+    cy += (ty - cy) * 0.16;
+    cr += (tr - cr) * 0.12;
 
-    // мягкое свечение по краю отверстия
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = 'rgba(34, 255, 138, 0.18)';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(lx, ly, RADIUS + 6, 0, Math.PI*2);
-    ctx.stroke();
+    ctx.clearRect(0, 0, w, h);
+
+    if (helmetReady && w > 2){
+      // шлем поверх лица
+      ctx.drawImage(helmet, 0, 0, w, h);
+
+      // «проявление лица» — мягкое отверстие под курсором
+      const r = Math.max(1, cr);
+      ctx.globalCompositeOperation = 'destination-out';
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, 'rgba(0,0,0,1)');
+      grad.addColorStop(0.62, 'rgba(0,0,0,1)');
+      grad.addColorStop(0.86, 'rgba(0,0,0,0.45)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // зелёный контур-«сканер»
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(34,255,138,0.22)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.97, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // мягкое свечение к краю
+      const glow = ctx.createRadialGradient(cx, cy, r * 0.92, cx, cy, r * 1.25);
+      glow.addColorStop(0, 'rgba(34,255,138,0.10)');
+      glow.addColorStop(1, 'rgba(34,255,138,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     requestAnimationFrame(draw);
   }
-  draw();
 
-  // 初始ная позиция в центре лица (примерно)
-  if (rect.w && rect.h) {
-    mx = rect.w * 0.5; my = rect.h * 0.38;
-    lx = mx; ly = my;
-  }
-
+  resize();
+  requestAnimationFrame(draw);
 })();
