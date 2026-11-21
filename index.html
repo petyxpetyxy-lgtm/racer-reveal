@@ -6,14 +6,15 @@
 <title>Saraunh0ly — кто под шлемом?</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%;background:#fff;color:#000;font-family:'Inter',system-ui,sans-serif}
-  .stage{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px}
-  .frame{position:relative;width:min(90vw,1080px);aspect-ratio:1280/714;border-radius:20px;overflow:background:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+  html,body{height:100%;background:#fff;color:#000;font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
+  .stage{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px 20px}
+  .frame{position:relative;width:min(92vw,1080px);aspect-ratio:1280/714;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
   .frame .face{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
   canvas#veil{position:absolute;inset:0}
-  .hint{position:absolute;top:4%;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#666;background:#f0f0f0;padding:8px 16px;border-radius:999px}
-  .signature{position:absolute;right:4%;bottom:5%;font-family:'Great Vibes',cursive;font-size:72px;color:#22aa44;text-decoration:none;text-transform:none;line-height:1;pointer-events:none}
-  .sig-green{color:#22aa44}
+  .hint{position:absolute;top:4%;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#666;background:#f8f8f8;padding:8px 16px;border-radius:999px;transition:opacity .4s}
+  .hint.blend{opacity:0}
+  .signature{position:absolute;right:4%;bottom:5%;font-family:'Great Vibes',cursive;font-size:72px;color:#22aa44;text-decoration:none;line-height:1;pointer-events:none;opacity:0;transition:opacity .4s}
+  .signature.visible{opacity:1}
   .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
   .sound-btn{background:#eee;border:1px solid #ccc;border-radius:999px;padding:8px 16px;font-size:12px;letter-spacing:1px;text-transform:lowercase;cursor:pointer}
   .sound-btn.playing{border-color:#22aa44;color:#22aa44}
@@ -30,8 +31,8 @@
   <div class="frame" id="frame">
     <img class="face" src="face.jpg" alt="гонщик">
     <canvas id="veil" aria-hidden="true"></canvas>
-    <div class="hint">води курсором по шлему</div>
-    <div class="signature sig-green">Saraunh0ly</div>
+    <div class="hint" id="hint">води курсором по шлему</div>
+    <div class="signature" id="sig">Saraunh0ly</div>
   </div>
 
   <div class="bar">
@@ -40,11 +41,11 @@
       <span id="soundLabel">включить звук</span>
     </button>
     <span class="tag">наведи — увидишь, кто под шлемом</span>
-    <span class="ver">v11</span>
+    <span class="ver">v12</span>
   </div>
 </div>
 
 <audio id="audio" src="song.m4a" loop preload="auto"></audio>
-<script src="app.js?v=11"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

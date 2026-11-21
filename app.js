@@ -4,7 +4,8 @@
   var frame = document.getElementById('frame');
   var canvas = document.getElementById('veil');
   var ctx = canvas.getContext('2d');
-  var hint = document.querySelector('.hint');
+  var hint = document.getElementById('hint');
+  var sig = document.getElementById('sig');
   var audio = document.getElementById('audio');
   var soundBtn = document.getElementById('soundBtn');
   var soundLabel = document.getElementById('soundLabel');
@@ -16,7 +17,6 @@
 
   var w = 0, h = 0, dpr = 1;
 
-  // mask: everything erased by cursor stays erased (but we'll do instant-return mode)
   var mask = document.createElement('canvas');
   var mctx = mask.getContext('2d');
 
@@ -36,17 +36,15 @@
   }
   window.addEventListener('resize', resize);
 
-  // -------- режим: линия (сразу возвращается) ----------
+  // ---------- режим: линия, след мгновенно возвращается ----------
   var R_LINE = 0.068;
-  var LINE_LIFE = 180; // мс — след исчезает почти сразу за курсором
+  var LINE_LIFE = 180;
 
   var brushR = function(){ return Math.max(12, h * R_LINE); };
 
-  // stamps: {x, y, born}
   var stamps = [];
   var lx = -9999, ly = -9999;
 
-  // спрайт кисти: плотная середина, тоненький размытый край, без обводки
   var sprite = (function(){
     var S = 128;
     var c = document.createElement('canvas');
@@ -100,9 +98,9 @@
     });
   }
 
-  // -------- звук --------
+  // ---------- звук ----------
   var soundOn = false;
-  var triedMoveSound = false;
+  var gestureCount = 0;
 
   function enableSound(){
     if (soundOn) return;
@@ -127,15 +125,25 @@
     if (soundOn) disableSound(); else enableSound();
   };
 
-  // первый жест/клик запускает звук
-  function tryStartSound(){
-    if (!triedMoveSound){
-      triedMoveSound = true;
-      enableSound();
-    }
+  // после первого движения/клика — показываем подпись и запускаем звук
+  function onFirstGesture(){
+    gestureCount++;
+    if (gestureCount < 2) return; // нужны 2 события (например, pointerdown + move), иначе хватает одного
+    // показываем подпись
+    if (sig) sig.classList.add('visible');
+    if (hint) hint.classList.add('blend');
+    // запускаем звук, если еще не стартанул
+    if (!soundOn) enableSound();
   }
 
-  // -------- указатель --------
+  ['pointerdown','touchstart','mousedown'].forEach(function(ev){
+    window.addEventListener(ev, onFirstGesture, {passive:true});
+  });
+  ['pointermove','touchmove'].forEach(function(ev){
+    window.addEventListener(ev, onFirstGesture, {passive:true});
+  });
+
+  // ---------- указатель ----------
   var px = -9999, py = -9999;
 
   function localPoint(e){
@@ -149,11 +157,13 @@
     var p = localPoint(e);
     px = p.x; py = p.y;
 
-    // если звук ещё не стартанул — пробуем здесь
-    tryStartSound();
-
     if (mode === 'line') strokeLine(px, py);
-    // mode 'erase' etc could be added later
+
+    // считаем как первое действие для показа подписи
+    if (!window.firstGestured){
+      window.firstGestured = true;
+      setTimeout(onFirstGesture, 30);
+    }
 
     if (hint) hint.style.opacity = '0';
   }
@@ -167,31 +177,7 @@
     lx = -9999; ly = -9999;
   });
 
-  // -------- роспись Saraunh0ly (появляется после первого действия) --------
-  var sigAppeared = false;
-  var sigEl = document.querySelector('.signature');
-  var originalHint = hint ? hint.textContent : '';
-
-  // когда пользователь взаимодействует — показываем подпись полной мощью
-  function maybeAppearSig(){
-    if (sigAppeared) return;
-    // если курсор уже двигали — сразу показываем
-    if (triedMoveSound || px > -9000){
-      sigAppeared = true;
-      if (sigEl) sigEl.style.opacity = '1';
-      if (hint) hint.style.opacity = '0';
-      return;
-    }
-    // иначе оставим hint, дадим время
-    setTimeout(maybeAppearSig, 200);
-  }
-
-  // старт отслеживания
-  ['pointerdown','touchstart','mousedown'].forEach(function(ev){
-    window.addEventListener(ev, maybeAppearSig, {passive:true});
-  });
-
-  // -------- отрисовка --------
+  // ---------- отрисовка ----------
   function brushR(){ return Math.max(12, h * R_LINE); }
 
   function rebuildLineMask(now){
@@ -215,7 +201,7 @@
 
     if (helmetReady && w > 2){
       ctx.drawImage(helmet, 0, 0, w, h);
-      if (mode === 'line') rebuildLineMask(now);
+      rebuildLineMask(now);
       ctx.globalCompositeOperation = 'destination-out';
       ctx.drawImage(mask, 0, 0, w, h);
       ctx.globalCompositeOperation = 'source-over';
