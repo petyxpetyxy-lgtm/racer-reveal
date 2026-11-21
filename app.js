@@ -4,17 +4,10 @@
   var frame = document.getElementById('frame');
   var canvas = document.getElementById('veil');
   var ctx = canvas.getContext('2d');
-  var hint = document.getElementById('hint');
+  var hint = document.querySelector('.hint');
   var audio = document.getElementById('audio');
   var soundBtn = document.getElementById('soundBtn');
   var soundLabel = document.getElementById('soundLabel');
-  var modeBtns = Array.prototype.slice.call(document.querySelectorAll('.mode-btn[data-mode]'));
-  var resetBtn = document.getElementById('resetBtn');
-  var stage = document.getElementById('stage');
-  var holder = document.getElementById('photoHolder');
-  var spacer = document.getElementById('spacer');
-  var sigsEl = document.getElementById('sigs');
-  var cue = document.getElementById('cue');
 
   var helmet = new Image();
   var helmetReady = false;
@@ -23,7 +16,7 @@
 
   var w = 0, h = 0, dpr = 1;
 
-  // маска: всё, что нарисовано кистью
+  // mask: everything erased by cursor stays erased (but we'll do instant-return mode)
   var mask = document.createElement('canvas');
   var mctx = mask.getContext('2d');
 
@@ -41,50 +34,19 @@
     mask.height = canvas.height;
     mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
-  if (window.ResizeObserver) {
-    new ResizeObserver(function(){ resize(); }).observe(frame);
-  }
   window.addEventListener('resize', resize);
 
-  // ---------------- режимы ----------------
-  var mode = 'line';
-  var HINTS = {
-    line: 'води курсором по шлему',
-    erase: 'води курсором — шлем стирается',
-    wear: 'води курсором — шлем появляется'
-  };
-
-  modeBtns.forEach(function(btn){
-    btn.addEventListener('click', function(){
-      if (btn.dataset.mode === mode) return;
-      mode = btn.dataset.mode;
-      modeBtns.forEach(function(b){ b.classList.toggle('active', b === btn); });
-      resetMarks();
-      if (hint) hint.textContent = HINTS[mode] || HINTS.line;
-    });
-  });
-
-  resetBtn.addEventListener('click', function(){
-    resetMarks();
-  });
-
-  function resetMarks(){
-    stamps.length = 0;
-    mctx.clearRect(0, 0, w, h);
-    lx = -9999; ly = -9999;
-  }
-
-  // ---------------- кисть ----------------
+  // -------- режим: линия (сразу возвращается) ----------
   var R_LINE = 0.068;
-  var LINE_LIFE = 175;
+  var LINE_LIFE = 180; // мс — след исчезает почти сразу за курсором
 
-  function brushR(){ return Math.max(13, h * R_LINE); }
+  var brushR = function(){ return Math.max(12, h * R_LINE); };
 
+  // stamps: {x, y, born}
   var stamps = [];
   var lx = -9999, ly = -9999;
 
-  // тонкий размытый край, без обводки
+  // спрайт кисти: плотная середина, тоненький размытый край, без обводки
   var sprite = (function(){
     var S = 128;
     var c = document.createElement('canvas');
@@ -104,13 +66,13 @@
   })();
 
   function addStamp(x, y, now){
-    stamps.push({ x: x, y: y, born: now });
+    stamps.push({x:x, y:y, born:now});
     if (stamps.length > 500) stamps.splice(0, stamps.length - 500);
   }
 
-  function stampMask(x, y, r, alpha){
-    mctx.globalAlpha = alpha;
-    mctx.drawImage(sprite, x - r, y - r, r * 2, r * 2);
+  function stampMask(x, y, r, a){
+    mctx.globalAlpha = a;
+    mctx.drawImage(sprite, x-r, y-r, r*2, r*2);
     mctx.globalAlpha = 1;
   }
 
@@ -121,99 +83,37 @@
       return;
     }
     var dx = x - lx, dy = y - ly;
-    var dist = Math.sqrt(dx * dx + dy * dy);
+    var dist = Math.sqrt(dx*dx + dy*dy);
     if (dist < step) return;
     var n = Math.floor(dist / step);
     for (var i = 1; i <= n; i++){
       var t = i / n;
-      fn(lx + dx * t, ly + dy * t);
+      fn(lx + dx*t, ly + dy*t);
     }
     lx = x; ly = y;
   }
 
-  // линия: след живёт мгновение и сразу возвращается
   function strokeLine(x, y){
     var now = performance.now();
-    eachStep(x, y, Math.max(4, brushR() * 0.28), function(sx, sy){
+    eachStep(x, y, Math.max(4, brushR()*0.28), function(sx, sy){
       addStamp(sx, sy, now);
     });
   }
 
-  // остаётся / шлем появляется: мазки остаются до сброса
-  function strokePaint(x, y){
-    var r = brushR() * 1.1;
-    eachStep(x, y, Math.max(4, r * 0.3), function(sx, sy){
-      stampMask(sx, sy, r, 0.9);
-    });
-  }
-
-  // ---------------- указатель ----------------
-  var px = -9999, py = -9999;
-
-  function localPoint(e){
-    var rect = frame.getBoundingClientRect();
-    var sx = w / Math.max(1, rect.width);
-    var sy = h / Math.max(1, rect.height);
-    return {
-      x: (e.clientX - rect.left) * sx,
-      y: (e.clientY - rect.top) * sy
-    };
-  }
-
+  // -------- звук --------
+  var soundOn = false;
   var triedMoveSound = false;
 
-  function onPointer(e){
-    var p = localPoint(e);
-    px = p.x; py = p.y;
-
-    if (mode === 'line') strokeLine(px, py);
-    else strokePaint(px, py);
-
-    // если браузер разрешает — музыка стартует уже от движения
-    if (!triedMoveSound){
-      triedMoveSound = true;
-      enableSound();
-    }
-
-    if (hint) hint.style.opacity = '0';
-  }
-
-  frame.addEventListener('pointermove', onPointer);
-
-  frame.addEventListener('pointerdown', function(e){
-    lx = -9999; ly = -9999;
-    onPointer(e);
-  });
-
-  frame.addEventListener('pointerleave', function(){
-    lx = -9999; ly = -9999;
-  });
-
-  // ---------------- звук ----------------
-  var soundOn = false;
-  var soundPending = false;
-
   function enableSound(){
-    if (soundOn || soundPending) return;
-    soundPending = true;
-    var p = null;
+    if (soundOn) return;
+    soundOn = true;
     try {
       audio.volume = 0.85;
-      p = audio.play();
-    } catch (err) { p = null; }
-
-    function started(){
-      soundPending = false;
-      soundOn = true;
-      soundBtn.classList.add('playing');
-      soundLabel.textContent = 'выключить звук';
-    }
-    function failed(){
-      soundPending = false;
-    }
-
-    if (p && p.then) p.then(started).catch(failed);
-    else started();
+      var p = audio.play();
+      if (p && p.then) p.then(function(){}).catch(function(){});
+    } catch (err) {}
+    soundBtn.classList.add('playing');
+    soundLabel.textContent = 'выключить звук';
   }
 
   function disableSound(){
@@ -223,130 +123,102 @@
     soundLabel.textContent = 'включить звук';
   }
 
-  soundBtn.addEventListener('click', function(){
+  soundBtn.onclick = function(){
     if (soundOn) disableSound(); else enableSound();
+  };
+
+  // первый жест/клик запускает звук
+  function tryStartSound(){
+    if (!triedMoveSound){
+      triedMoveSound = true;
+      enableSound();
+    }
+  }
+
+  // -------- указатель --------
+  var px = -9999, py = -9999;
+
+  function localPoint(e){
+    var rect = frame.getBoundingClientRect();
+    var sx = w / Math.max(1, rect.width);
+    var sy = h / Math.max(1, rect.height);
+    return {x: (e.clientX - rect.left)*sx, y: (e.clientY - rect.top)*sy};
+  }
+
+  function onPointer(e){
+    var p = localPoint(e);
+    px = p.x; py = p.y;
+
+    // если звук ещё не стартанул — пробуем здесь
+    tryStartSound();
+
+    if (mode === 'line') strokeLine(px, py);
+    // mode 'erase' etc could be added later
+
+    if (hint) hint.style.opacity = '0';
+  }
+
+  frame.addEventListener('pointermove', onPointer);
+  frame.addEventListener('pointerdown', function(){
+    lx = -9999; ly = -9999;
+    onPointer();
+  });
+  frame.addEventListener('pointerleave', function(){
+    lx = -9999; ly = -9999;
   });
 
-  // первый жест пользователя запускает песню
-  function firstGesture(e){
-    if (soundBtn.contains(e.target)) return;
-    enableSound();
-    cleanup();
-  }
-  function cleanup(){
-    ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev){
-      window.removeEventListener(ev, firstGesture);
-    });
-  }
-  ['pointerdown', 'touchstart', 'keydown'].forEach(function(ev){
-    window.addEventListener(ev, firstGesture, { passive: true });
-  });
+  // -------- роспись Saraunh0ly (появляется после первого действия) --------
+  var sigAppeared = false;
+  var sigEl = document.querySelector('.signature');
+  var originalHint = hint ? hint.textContent : '';
 
-  // ---------------- прокрутка ----------------
-  var scrollTarget = 0, scrollP = 0, lastScale = -1;
-  var debugCollage = location.hash === '#collage';
-
-  function measureScroll(){
-    var max = Math.max(1, spacer.offsetHeight - window.innerHeight);
-    scrollTarget = Math.min(1, Math.max(0, window.scrollY / max));
-    if (cue) cue.classList.toggle('hide', scrollTarget > 0.03);
-  }
-  window.addEventListener('scroll', measureScroll, { passive: true });
-  window.addEventListener('resize', measureScroll);
-  measureScroll();
-
-  function easeInOut(t){
-    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  }
-
-  function updateScroll(){
-    if (debugCollage){
-      holder.style.transform = 'scale(0.5)';
-      stage.classList.add('collage');
+  // когда пользователь взаимодействует — показываем подпись полной мощью
+  function maybeAppearSig(){
+    if (sigAppeared) return;
+    // если курсор уже двигали — сразу показываем
+    if (triedMoveSound || px > -9000){
+      sigAppeared = true;
+      if (sigEl) sigEl.style.opacity = '1';
+      if (hint) hint.style.opacity = '0';
       return;
     }
-
-    scrollP += (scrollTarget - scrollP) * 0.12;
-    if (Math.abs(scrollTarget - scrollP) < 0.0006) scrollP = scrollTarget;
-
-    var t = Math.min(1, scrollP / 0.8);
-    var s = 1 - 0.5 * easeInOut(t);
-    if (Math.abs(s - lastScale) > 0.0005){
-      holder.style.transform = 'scale(' + s.toFixed(4) + ')';
-      lastScale = s;
-    }
-    stage.classList.toggle('collage', scrollP > 0.16);
+    // иначе оставим hint, дадим время
+    setTimeout(maybeAppearSig, 200);
   }
 
-  // ---------------- росписи вокруг ----------------
-  function buildSigs(){
-    var N = 40;
-    var seed = 20261120;
-    function rnd(){
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      return seed / 4294967296;
-    }
-    var frag = document.createDocumentFragment();
-    var hues = ['#22ff8a', '#43ffa5', '#12e57c', '#8dffc4', '#2bff9c'];
+  // старт отслеживания
+  ['pointerdown','touchstart','mousedown'].forEach(function(ev){
+    window.addEventListener(ev, maybeAppearSig, {passive:true});
+  });
 
-    for (var i = 0; i < N; i++){
-      var el = document.createElement('span');
-      var big = (i < 4);
-      el.className = 'sig' + (big ? ' sig-big' : '');
-      el.textContent = 'Saraunh0ly';
+  // -------- отрисовка --------
+  function brushR(){ return Math.max(12, h * R_LINE); }
 
-      var x = 3 + rnd() * 94;
-      var y = 4 + rnd() * 92;
-      el.style.left = x.toFixed(2) + '%';
-      el.style.top = y.toFixed(2) + '%';
-      el.style.setProperty('--fs', (big ? (5.5 + rnd() * 3.2) : (1.5 + rnd() * 2.9)).toFixed(2) + 'vw');
-      el.style.setProperty('--r', (-24 + rnd() * 48).toFixed(1) + 'deg');
-      el.style.setProperty('--o', (big ? (0.10 + rnd() * 0.10) : (0.20 + rnd() * 0.52)).toFixed(2));
-      el.style.setProperty('--i', String(i));
-      el.style.setProperty('--hue', hues[Math.floor(rnd() * hues.length)]);
-      frag.appendChild(el);
-    }
-    sigsEl.appendChild(frag);
-  }
-  buildSigs();
-
-  // ---------------- отрисовка ----------------
   function rebuildLineMask(now){
     var r = brushR();
-    mctx.clearRect(0, 0, w, h);
-    for (var i = stamps.length - 1; i >= 0; i--){
+    mctx.clearRect(0,0,w,h);
+    for (var i = stamps.length-1; i >= 0; i--){
       if (now - stamps[i].born > LINE_LIFE) stamps.splice(i, 1);
     }
     for (var j = 0; j < stamps.length; j++){
       var s = stamps[j];
       var age = now - s.born;
       if (age >= LINE_LIFE) continue;
-      var a = Math.pow(1 - age / LINE_LIFE, 1.25);
+      var a = Math.pow(1 - age/LINE_LIFE, 1.25);
       stampMask(s.x, s.y, r, a);
     }
   }
 
   function draw(now){
     resize();
-    updateScroll();
-
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0,0,w,h);
 
     if (helmetReady && w > 2){
-      if (mode === 'wear'){
-        // наоборот: шлем появляется на лице
-        ctx.drawImage(helmet, 0, 0, w, h);
-        ctx.globalCompositeOperation = 'destination-in';
-        ctx.drawImage(mask, 0, 0, w, h);
-        ctx.globalCompositeOperation = 'source-over';
-      } else {
-        // шлем поверх лица, стираем по маске
-        ctx.drawImage(helmet, 0, 0, w, h);
-        if (mode === 'line') rebuildLineMask(now);
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.drawImage(mask, 0, 0, w, h);
-        ctx.globalCompositeOperation = 'source-over';
-      }
+      ctx.drawImage(helmet, 0, 0, w, h);
+      if (mode === 'line') rebuildLineMask(now);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.drawImage(mask, 0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
     }
 
     requestAnimationFrame(draw);
@@ -355,20 +227,4 @@
   resize();
   requestAnimationFrame(draw);
 
-  // отладочный якорь для скриншотов
-  if (location.hash === '#scrolltest'){
-    setTimeout(function(){
-      window.scrollTo(0, (spacer.offsetHeight - window.innerHeight) * 0.9);
-      setTimeout(function(){
-        var r = stage.getBoundingClientRect();
-        if (hint){
-          hint.textContent = 'Y=' + Math.round(window.scrollY) +
-            ' top=' + Math.round(r.top) +
-            ' h=' + Math.round(r.height) +
-            ' vh=' + window.innerHeight;
-          hint.style.opacity = '1';
-        }
-      }, 700);
-    }, 300);
-  }
 })();
