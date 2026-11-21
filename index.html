@@ -3,40 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#05080a">
 <title>Saraunh0ly — кто под шлемом?</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=7">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 
-<div class="stage">
-  <div class="row">
-    <div class="frame" id="frame">
-      <img class="face" src="face.jpg" alt="гонщик без шлема">
-      <canvas id="veil" aria-hidden="true"></canvas>
-      <div class="signature">Saraunh0ly</div>
-      <div class="hint">води курсором по шлему</div>
+<main class="stage" id="stage">
+
+    <div class="sigs" id="sigs" aria-hidden="true"></div>
+
+    <div class="photo-holder" id="photoHolder">
+      <div class="frame" id="frame">
+        <img class="face" src="face.jpg" alt="гонщик">
+        <canvas id="veil" aria-hidden="true"></canvas>
+        <div class="hint" id="hint">води курсором по шлему</div>
+        <div class="signature">Saraunh0ly</div>
+      </div>
     </div>
 
     <div class="panel" id="panel" aria-label="Режимы эффекта">
-      <button class="mode-btn active" data-mode="line"><span class="mi">✎</span><span>линия</span></button>
-      <button class="mode-btn" data-mode="circle"><span class="mi">◯</span><span>круг</span></button>
-      <button class="mode-btn" data-mode="erase"><span class="mi">⌫</span><span>стирание</span></button>
+      <button class="mode-btn active" data-mode="line">
+        <span class="mi">✎</span>
+        <span class="mt"><b>линия</b><small>сразу возвращается</small></span>
+      </button>
+      <button class="mode-btn" data-mode="erase">
+        <span class="mi">⌫</span>
+        <span class="mt"><b>остаётся</b><small>шлем стирается</small></span>
+      </button>
+      <button class="mode-btn" data-mode="wear">
+        <span class="mi">⛑</span>
+        <span class="mt"><b>шлем</b><small>наоборот — появляется</small></span>
+      </button>
+      <button class="mode-btn action" id="resetBtn" type="button">
+        <span class="mi">↺</span>
+        <span class="mt"><b>сброс</b><small>вернуть шлем</small></span>
+      </button>
     </div>
-  </div>
 
-  <div class="bar">
-    <button id="soundBtn" class="sound-btn" aria-label="Включить/выключить звук">
-      <span class="eq"><i></i><i></i><i></i><i></i></span>
-      <span id="soundLabel">включить звук</span>
-    </button>
-    <span class="tag">наведи — увидишь, кто под шлемом</span>
-  </div>
-</div>
+    <div class="bar">
+      <button id="soundBtn" class="sound-btn" type="button" aria-label="Включить или выключить звук">
+        <span class="eq"><i></i><i></i><i></i><i></i></span>
+        <span id="soundLabel">включить звук</span>
+      </button>
+      <span class="tag">наведи — увидишь, кто под шлемом</span>
+      <span class="ver">v9</span>
+    </div>
 
-<audio id="audio" src="sound.m4a" loop preload="auto"></audio>
-<script src="app.js?v=7"></script>
+    <div class="cue" id="cue">листай вниз<span>↓</span></div>
+
+</main>
+
+<div class="spacer" id="spacer" aria-hidden="true"></div>
+
+<audio id="audio" src="song.m4a" loop preload="auto"></audio>
+<script src="app.js?v=9"></script>
 </body>
 </html>
