@@ -160,12 +160,20 @@
     };
   }
 
+  var triedMoveSound = false;
+
   function onPointer(e){
     var p = localPoint(e);
     px = p.x; py = p.y;
 
     if (mode === 'line') strokeLine(px, py);
     else strokePaint(px, py);
+
+    // если браузер разрешает — музыка стартует уже от движения
+    if (!triedMoveSound){
+      triedMoveSound = true;
+      enableSound();
+    }
 
     if (hint) hint.style.opacity = '0';
   }
@@ -183,17 +191,29 @@
 
   // ---------------- звук ----------------
   var soundOn = false;
+  var soundPending = false;
 
   function enableSound(){
-    if (soundOn) return;
-    soundOn = true;
+    if (soundOn || soundPending) return;
+    soundPending = true;
+    var p = null;
     try {
       audio.volume = 0.85;
-      var p = audio.play();
-      if (p && p.then) p.catch(function(){});
-    } catch (err) {}
-    soundBtn.classList.add('playing');
-    soundLabel.textContent = 'выключить звук';
+      p = audio.play();
+    } catch (err) { p = null; }
+
+    function started(){
+      soundPending = false;
+      soundOn = true;
+      soundBtn.classList.add('playing');
+      soundLabel.textContent = 'выключить звук';
+    }
+    function failed(){
+      soundPending = false;
+    }
+
+    if (p && p.then) p.then(started).catch(failed);
+    else started();
   }
 
   function disableSound(){
