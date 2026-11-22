@@ -4,48 +4,60 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saraunh0ly — кто под шлемом?</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%;background:#fff;color:#000;font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
-  .stage{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px 20px}
-  .frame{position:relative;width:min(92vw,1080px);aspect-ratio:1280/714;border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
-  .frame .face{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
-  canvas#veil{position:absolute;inset:0}
-  .hint{position:absolute;top:4%;left:50%;transform:translateX(-50%);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#666;background:#f8f8f8;padding:8px 16px;border-radius:999px;transition:opacity .4s}
-  .hint.blend{opacity:0}
-  .signature{position:absolute;right:4%;bottom:5%;font-family:'Great Vibes',cursive;font-size:72px;color:#22aa44;text-decoration:none;line-height:1;pointer-events:none;opacity:0;transition:opacity .4s}
-  .signature.visible{opacity:1}
-  .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
-  .sound-btn{background:#eee;border:1px solid #ccc;border-radius:999px;padding:8px 16px;font-size:12px;letter-spacing:1px;text-transform:lowercase;cursor:pointer}
-  .sound-btn.playing{border-color:#22aa44;color:#22aa44}
-  .eq{display:flex;gap:3px;height:12px;align-items:flex-end}
-  .eq i{width:2px;border-radius:2px;background:#22aa44;height:3px;opacity:0.5}
-  .eq.playing i{opacity:1;animation:eq 0.6s infinite}
-  @keyframes eq{0%,100%{height:3px;opacity:0.5}50%{height:12px;opacity:1}}
-  .tag{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888}
-  .ver{font-size:10px;color:#aaa}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
-<div class="stage">
-  <div class="frame" id="frame">
-    <img class="face" src="face.jpg" alt="гонщик">
-    <canvas id="veil" aria-hidden="true"></canvas>
-    <div class="hint" id="hint">води курсором по шлему</div>
-    <div class="signature" id="sig">Saraunh0ly</div>
+
+<main class="stage" id="stage">
+
+  <div class="sigs" id="sigs" aria-hidden="true"></div>
+
+  <div class="photo-wrap" id="photoWrap">
+    <div class="frame" id="frame">
+      <img class="face" src="face.jpg" alt="гонщик">
+      <canvas id="veil" aria-hidden="true"></canvas>
+      <div class="hint" id="hint">води курсором по шлему</div>
+      <div class="signature">Saraunh0ly</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel" aria-label="Режимы эффекта">
+    <button class="mode-btn active" data-mode="line" type="button">
+      <span class="mi">✎</span>
+      <span class="mt"><b>линия</b><small>сразу возвращается</small></span>
+    </button>
+    <button class="mode-btn" data-mode="erase" type="button">
+      <span class="mi">⌫</span>
+      <span class="mt"><b>остаётся</b><small>шлем стирается</small></span>
+    </button>
+    <button class="mode-btn" data-mode="wear" type="button">
+      <span class="mi">⛑</span>
+      <span class="mt"><b>шлем</b><small>наоборот — появляется</small></span>
+    </button>
+    <button class="mode-btn action" id="resetBtn" type="button">
+      <span class="mi">↺</span>
+      <span class="mt"><b>сброс</b><small>вернуть шлем</small></span>
+    </button>
   </div>
 
   <div class="bar">
-    <button class="sound-btn" id="soundBtn" aria-label="Включить звук">
-      <span class="eq"><i></i><i></i><i></i><i></i></span>
+    <button class="sound-btn" id="soundBtn" type="button" aria-label="Включить или выключить звук">
+      <span class="eq" id="eq"><i></i><i></i><i></i><i></i></span>
       <span id="soundLabel">включить звук</span>
     </button>
     <span class="tag">наведи — увидишь, кто под шлемом</span>
-    <span class="ver">v12</span>
+    <span class="ver">v14</span>
   </div>
-</div>
+
+  <div class="cue" id="cue">прокрути вниз — появятся росписи ↓</div>
+
+</main>
 
 <audio id="audio" src="song.m4a" loop preload="auto"></audio>
-<script src="app.js?v=12"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>
+
