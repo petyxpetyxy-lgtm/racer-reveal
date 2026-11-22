@@ -141,6 +141,8 @@
       eachStep(p.x, p.y, Math.max(4, brushR() * 0.34), addPaint);
     }
     if (hint) hint.style.opacity = '0';
+    // рисуем сразу, не дожидаясь кадра
+    render(performance.now());
   }
 
   frame.addEventListener('pointermove', onPointer);
