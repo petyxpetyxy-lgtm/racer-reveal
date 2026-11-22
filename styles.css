@@ -226,6 +226,14 @@ body {
 }
 .cue span { font-size: 13px; color: #1fae54; animation: cueFloat 1.8s ease-in-out infinite; }
 .cue.hide { opacity: 0; }
+.cue.back {
+  pointer-events: auto;
+  cursor: pointer;
+  color: #16974a;
+  opacity: 1;
+}
+.cue.back:hover { color: #0b6b33; }
+.scroll-space { height: 150vh; background: #fff; }
 @keyframes cueFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
 /* ---------- телефоны ---------- */

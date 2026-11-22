@@ -209,17 +209,52 @@
     if (revealed) return;
     revealed = true;
     stage.classList.add('revealed');
-    if (cue) cue.classList.add('hide');
+    if (cue){
+      cue.classList.remove('hide');
+      cue.classList.add('back');
+      cue.textContent = '↑ вернуть';
+    }
   }
 
-  window.addEventListener('wheel', revealSigs, { passive: true });
+  function hideSigs(){
+    if (!revealed) return;
+    revealed = false;
+    stage.classList.remove('revealed');
+    if (cue){
+      cue.classList.remove('back');
+      cue.textContent = 'прокрути вниз — появятся росписи ↓';
+    }
+  }
+
+  window.addEventListener('scroll', function(){
+    var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    if (y > 30) revealSigs();
+    else if (y < 10) hideSigs();
+  }, { passive: true });
+
+  // на телефоне свайп по фото не листает страницу — ловим его отдельно
   window.addEventListener('touchmove', revealSigs, { passive: true });
+
   window.addEventListener('keydown', function(e){
     if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') revealSigs();
+    if (e.key === 'Escape' || e.key === 'ArrowUp' || e.key === 'Home'){
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   });
-  window.addEventListener('scroll', function(){
-    if (window.scrollY > 20) revealSigs();
-  }, { passive: true });
+
+  if (cue){
+    cue.addEventListener('click', function(){
+      if (revealed){
+        resetMarks();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // подстраховка, если плавная прокрутка не сработала
+        setTimeout(function(){
+          var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+          if (y < 10) hideSigs();
+        }, 700);
+      }
+    });
+  }
 
   function buildSigs(){
     var N = 30;
